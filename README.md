@@ -36,7 +36,6 @@ Deploy Sysmon
 Install Sysmon with a custom configuration file:
 ```bash
 .\Sysmon64.exe -i sysmonconfig.xml -accepteula
-Enable Security Auditing: This ensures failed logons are recorded for SIEM ingestion:
 ```
 Enable Security Auditing
 Ensure failed logons are recorded for SIEM ingestion
