@@ -1,7 +1,7 @@
 # Cloud-Based-SOC-Lab-with-Wazuh-and-Sysmon
 
 ## 🚀 Project Overview
-This project demonstrates the implementation of a cloud-based **Security Operations Center (SOC)** environment. I deployed a **Wazuh Manager** on an Ubuntu cloud instance (cPouta) to monitor a local **Windows 10** victim machine. By integrating **Sysmon**, I achieved high-fidelity telemetry that allowed for the detection of advanced attack techniques, including network reconnaissance and authentication brute-forcing.
+This project demonstrates the implementation of a cloud-based Security Operations Center (SOC) environment. I deployed a Wazuh Manager on an Ubuntu cloud instance (cPouta) to monitor a local Windows 10 victim machine. By integrating Sysmon, I achieved high-fidelity telemetry that allowed for the detection of advanced attack techniques, including network reconnaissance and authentication brute-forcing.
 
 ---
 
@@ -66,7 +66,7 @@ Technique: Stealth SYN scan from Kali Linux.
 
 Attack Command:
 ```bash
-nmap -sS -p 1-1000 <Victim_IP>
+nmap -sS -p 1-1000 <My_Victim_IP>
 ```
 Detection: Triggered Rule 92031: Discovery activity executed in the Wazuh dashboard.
 
