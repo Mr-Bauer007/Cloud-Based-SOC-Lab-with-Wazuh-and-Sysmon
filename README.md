@@ -1,61 +1,95 @@
 # Cloud-Based-SOC-Lab-with-Wazuh-and-Sysmon
-🚀 Project Overview
-This project involved setting up a comprehensive Security Operations Center (SOC) home lab to simulate real-world attacks and detect them using a Security Information and Event Management (SIEM) system. The lab consists of a cloud-hosted Wazuh Manager (Ubuntu) and a local Windows 10 Victim Machine equipped with Sysmon for advanced telemetry.
 
-The goal was to demonstrate the full defensive lifecycle: from initial reconnaissance and brute-force attempts to advanced persistence mechanisms.
+# Cloud-Based SOC Lab: Wazuh SIEM & Sysmon Telemetry
 
-🏗️ Architecture & Tools
-Wazuh Manager: Hosted on cPouta Cloud (Ubuntu 22.04 LTS).
+## 🚀 Project Overview
+This project demonstrates the implementation of a cloud-based **Security Operations Center (SOC)** environment. I deployed a **Wazuh Manager** on an Ubuntu cloud instance (cPouta) to monitor a local **Windows 10** victim machine. By integrating **Sysmon**, I achieved high-fidelity telemetry that allowed for the detection of advanced attack techniques, including network reconnaissance and authentication brute-forcing.
 
-Wazuh Agent: Installed on a local Windows 10 VM (VMware).
+---
 
-Sysmon: Configured with a modular ruleset for high-fidelity endpoint logging.
+## 🏗️ Architecture & Tools
+* **SIEM Platform:** [Wazuh 4.9](https://wazuh.com/)
+* **Cloud Infrastructure:** cPouta Cloud (Ubuntu 22.04 LTS)
+* **Endpoint Telemetry:** Sysmon with Olaf Hartong's Modular Configuration
+* **Victim OS:** Windows 10 (Virtual Machine)
+* **Attacker OS:** Kali Linux (Virtual Machine)
 
-Attacker Host: Kali Linux (Local VM) used for network-based attacks.
 
-Tools: PowerShell, Hydra, Nmap, and Custom OSSEC Rules.
 
-🛠️ Configuration & Implementation
-1. Endpoint Telemetry (Sysmon)
-To gain deep visibility into the Windows machine, Sysmon was installed with a configuration optimized for the MITRE ATT&CK framework.
+---
 
-Command: Sysmon64.exe -i sysmonconfig.xml.
+## 🛠️ Step-by-Step Lab Setup
 
-Integration: The Wazuh agent was configured to monitor the Microsoft-Windows-Sysmon/Operational event channel in ossec.conf.
+### 1. Manager Deployment (Cloud)
+1. **Provision Instance:** Deploy an Ubuntu 22.04 instance on cPouta.
+2. **Install Wazuh:** Execute the assisted installation script:
+   ```bash
+   curl -sO [https://packages.wazuh.com/4.9/wazuh-install.sh](https://packages.wazuh.com/4.9/wazuh-install.sh) && sudo bash ./wazuh-install.sh -a
 
-2. SIEM Rule Tuning
-Custom rules were added to the Wazuh Manager to handle specific lab scenarios and reduce false positives:
+2. Victim Configuration (Windows 10)
+Install Wazuh Agent: Download the .msi and enroll it using the Manager's IP:
 
-Rule 92213 Tuning: Documented the identification of __PSScriptPolicyTest as a false positive and demonstrated how to create exclusion rules in local_rules.xml.
+PowerShell
 
-⚔️ Attack Simulations & Detections
-1. Network Reconnaissance (Nmap)
-Technique: Stealth SYN scan from Kali Linux targeting the victim.
+.\wazuh-agent-4.9.msi /q WAZUH_MANAGER="YOUR_MANAGER_IP"
+Deploy Sysmon: Install Sysmon with a custom configuration file:
 
-Detection: Triggered Rule 92031 (Discovery activity executed) as the system attempted to respond to multiple rapid connection probes.
+PowerShell
 
-2. SMB Brute Force (Hydra)
-Technique: Automated credential guessing using the rockyou.txt wordlist via SMB.
+.\Sysmon64.exe -i sysmonconfig.xml -accepteula
+Enable Security Auditing: This ensures failed logons are recorded for SIEM ingestion:
 
-Detection: Triggered Rule 60122 (Multiple Windows logon failures).
+PowerShell
 
-Outcome: Successfully validated Active Response, resulting in a firewall block of the Attacker's IP.
+auditpol /set /subcategory:"Logon" /success:enable /failure:enable
+Agent Integration: Link Sysmon to Wazuh by adding this to ossec.conf:
 
-3. Persistence via Scheduled Tasks
-Technique: Creation of a persistent backdoor using schtasks.
+XML
 
-Detection: Triggered Rule 92154 (Scheduled task created) after enabling the TaskScheduler/Operational log channel.
+<localfile>
+  <location>Microsoft-Windows-Sysmon/Operational</location>
+  <log_format>eventchannel</log_format>
+</localfile>
+3. Attacker Configuration (Kali Linux)
+Ensure the Kali VM is on the same NAT network as the Windows VM to enable connectivity.
 
-📈 Key Metrics & Results
-Visibility: 100% of simulated malicious process executions were captured via Sysmon Event ID 1.
+Temporarily disable the Windows Firewall to allow remote scanning:
 
-Response: Automated IP blocking reduced the duration of brute-force attacks from minutes to seconds.
+PowerShell
 
-Telemetry: Successfully integrated non-standard Windows logs (Sysmon/Task Scheduler) into a centralized cloud dashboard.
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+⚔️ Simulated Attacks & Detections
+Phase 1: Network Reconnaissance
+Technique: Stealth SYN scan from Kali Linux.
 
+Attack Command: nmap -sS -p 1-1000 <Victim_IP>
+
+Detection: Triggered Rule 92031: Discovery activity executed in the Wazuh dashboard.
+
+Phase 2: Authentication Brute Force
+During testing, standard rockyou.txt dictionary attacks were filtered by network security controls. I successfully pivoted to a PowerShell loop to simulate a high-velocity brute-force attempt.
+
+Attack Command:
+
+PowerShell
+
+1..50 | ForEach-Object { net use \\localhost /user:fakeuser "wrongpassword123" }
+Detection: This activity generated multiple Event ID 4625 (Failed Logon) alerts, leading to Rule 60122: Multiple Windows logon failures.
+
+🔧 SIEM Tuning & Optimization
+I identified Rule 92213 as a source of false positives due to legitimate PowerShell policy checks (__PSScriptPolicyTest). I implemented a custom exclusion rule in local_rules.xml to tune the SIEM:
+
+XML
+
+<rule id="100001" level="0">
+  <if_sid>92213</if_sid>
+  <field name="win.eventdata.targetFilename" type="pcre2">__PSScriptPolicyTest_.*\.ps1$</field>
+  <description>Ignore legitimate PowerShell Script Policy Test files</description>
+</rule>
 💡 Lessons Learned
-Telemetry at the Source: Confirmed that SIEM detection is only as strong as host-based auditing (e.g., needing auditpol for logon failure logging).
+Telemetry Gap: SIEM monitoring is only as effective as the underlying host's auditing policies.
 
-SIEM Tuning: Gained experience in differentiating between legitimate administrative activity and malicious reconnaissance.
+Pivot Skills: When one attack method (Hydra/RockYou) failed, pivoting to native OS tools (PowerShell) allowed for successful detection validation.
 
-Network Isolation: Overcame virtual network isolation issues between Kali and Windows VMs to enable remote attack simulations.
+False Positive Management: Gained experience in "Tuning" a SIEM to differentiate between routine system operations and malicious activity.
+   
