@@ -33,6 +33,7 @@ Download the .msi and enroll it using the Manager's IP:
 .\wazuh-agent-4.9.msi /q WAZUH_MANAGER="YOUR_MANAGER_IP"
 ```
 Deploy Sysmon
+
 Install Sysmon with a custom configuration file:
 ```bash
 .\Sysmon64.exe -i sysmonconfig.xml -accepteula
