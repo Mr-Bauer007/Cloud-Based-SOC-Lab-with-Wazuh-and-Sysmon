@@ -27,6 +27,7 @@ This project demonstrates the implementation of a cloud-based Security Operation
 2. Victim Configuration (Windows 10, powershell)
 
 Install Wazuh Agent
+
 Download the .msi and enroll it using the Manager's IP:
 
 ```bash
@@ -39,11 +40,13 @@ Install Sysmon with a custom configuration file:
 .\Sysmon64.exe -i sysmonconfig.xml -accepteula
 ```
 Enable Security Auditing
+
 Ensure failed logons are recorded for SIEM ingestion
 ```bash
 auditpol /set /subcategory:"Logon" /success:enable /failure:enable
 ```
 Agent Integration
+
 Link Sysmon to Wazuh by adding this to ossec.conf:
 ```bash
 <localfile>
